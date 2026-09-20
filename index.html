@@ -177,9 +177,12 @@ function updateLevel4(){
 
 function buildLevel5(){
   clearPuzzle(); makeRoom(); resetPlayer();
-  box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
-  level5.door=box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
-  level5.button=box([1.4,.18,1.4],[0,.2,4.8],0xd52b36);
+  // Long sprint corridor: Level 5 is intentionally much longer so players learn sprinting.
+  box([14,4.5,.2],[0,2.25,-15],0x252c36); box([14,4.5,.2],[0,2.25,15],0x252c36);
+  box([.2,4.5,30],[-7,2.25,0],0x252c36); box([.2,4.5,30],[7,2.25,0],0x252c36);
+  box([14,.2,30],[0,0,0],0x343b46);
+  level5.door=box([2.5,3.7,.3],[0,1.85,-14.58],0xa32935);
+  level5.button=box([1.4,.18,1.4],[0,.2,10],0xd52b36);
   level5.open=false; level5.time=0; level5.started=false;
   setHUD("<b>LEVEL 5 — BEAT THE TIMER</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Press the button, then sprint across the room to the door before time runs out!<br>⏱️ You have 6 seconds.");
   msg.textContent="Press the red button and RUN!";
@@ -337,7 +340,7 @@ function loop(){
   f.applyMatrix4(rot);r.applyMatrix4(rot);const move=new THREE.Vector3();
   if(keys.KeyW)move.add(f);if(keys.KeyS)move.sub(f);if(keys.KeyD)move.add(r);if(keys.KeyA)move.sub(r);
   if(move.lengthSq())move.normalize().multiplyScalar(speed*dt);
-  camera.position.add(move);camera.position.x=Math.max(-6.2,Math.min(6.2,camera.position.x));camera.position.z=Math.max(-6.2,Math.min(6.2,camera.position.z));camera.position.y=1.7;
+  camera.position.add(move);camera.position.x=Math.max(-6.2,Math.min(6.2,camera.position.x));camera.position.z=Math.max(-14.2,Math.min(14.2,camera.position.z));camera.position.y=1.7;
   if(carrying&&held){
     held.position.copy(camera.position);held.position.y=1.05;held.position.add(f.clone().multiplyScalar(1.5));
   }

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Room Puzzle — Prototype 01</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;font-family:Arial,sans-serif}
+#hud{position:fixed;left:16px;top:16px;color:#fff;background:rgba(0,0,0,.55);padding:12px 14px;border:1px solid #33404f;border-radius:10px;z-index:5;line-height:1.5}
+#msg{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.7);padding:10px 16px;border-radius:8px;z-index:5;min-width:220px;text-align:center}
+#cross{position:fixed;left:50%;top:50%;width:8px;height:8px;margin:-4px;border:1px solid #fff;border-radius:50%;z-index:4;pointer-events:none}
+button{padding:8px 12px;border:0;border-radius:7px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · Mouse: look · E: interact<br>Put the blue cube on the pressure plate.</div>
+<div id="msg">Click the room to start</div><div id="cross"></div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { PointerLockControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/PointerLockControls.js";
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x080b10);
+scene.fog=new THREE.Fog(0x080b10,18,45);
+
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.05,100);
+camera.position.set(0,1.7,7);
+
+const renderer=new THREE.WebGLRenderer({antialias:false});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));
+renderer.shadowMap.enabled=false;
+document.body.appendChild(renderer.domElement);
+
+const controls=new PointerLockControls(camera,renderer.domElement);
+renderer.domElement.addEventListener("click",()=>controls.lock());
+
+const msg=document.getElementById("msg");
+controls.addEventListener("lock",()=>msg.textContent="Find the blue cube.");
+controls.addEventListener("unlock",()=>msg.textContent="Click to resume.");
+
+const ambient=new THREE.HemisphereLight(0xb9d5ff,0x20242c,1.8);
+scene.add(ambient);
+const lamp=new THREE.PointLight(0xffffff,45,25);
+lamp.position.set(0,4.2,0); scene.add(lamp);
+
+function box(name,size,pos,color,materialOpts={}){
+  const geo=new THREE.BoxGeometry(...size);
+  const mat=new THREE.MeshStandardMaterial({color,...materialOpts});
+  const m=new THREE.Mesh(geo,mat); m.name=name; m.position.set(...pos); scene.add(m); return m;
+}
+function cylinder(name,r,h,pos,color){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,20),new THREE.MeshStandardMaterial({color}));
+  m.name=name;m.position.set(...pos);scene.add(m);return m;
+}
+
+// PROCEDURAL ASSET SET — no external model files required.
+const floor=box("Floor",[14,.2,14],[0,0,0],0x303741);
+for(const [x,z,rx,rz] of [[0,-7,14,.2],[0,7,14,.2],[-7,0,.2,14],[7,0,.2,14]])
+  box("Wall",[rx,4.5,rz],[x,2.25,z],0x222831);
+box("DoorFrame",[3,4.2,.35],[0,2.1,-6.78],0x59636f);
+const door=box("ExitDoor",[2.6,3.8,.25],[0,1.9,-6.62],0x8b202b);
+
+const plate=box("PressurePlate",[2.2,.12,2.2],[-3,.16,-2],0x6b1721,{metalness:.1});
+plate.userData.baseY=.16;
+const cube=box("PuzzleCube",[1.15,1.15,1.15],[2,.75,-2],0x198cff,{roughness:.35,metalness:.05});
+cube.userData.held=false;
+cylinder("Button",.32,.16,[4,.18,3],0xe7b21c);
+
+const key=box("Key",[.9,.12,.3],[4,.3,-4],0xffd85a);
+key.rotation.y=.4;
+
+for(let i=-2;i<=2;i++) box("WallPanel",[1.8,2,.12],[i*2.3,1.5,-6.5],0x313944);
+
+let open=false, carrying=false;
+const keys={};
+addEventListener("keydown",e=>{keys[e.code]=true;if(e.code==="KeyE")interact();});
+addEventListener("keyup",e=>keys[e.code]=false);
+
+function interact(){
+  if(!controls.isLocked)return;
+  const d=camera.position.distanceTo(cube.position);
+  if(!carrying && d<2.2){carrying=true;msg.textContent="Cube picked up. Move near the plate and press E.";}
+  else if(carrying){
+    const pd=camera.position.distanceTo(plate.position);
+    if(pd<2.6){
+      carrying=false; cube.position.set(plate.position.x,.75,plate.position.z);
+      open=true; door.material.color.set(0x1d9b5a);
+      msg.textContent="LOCK OPEN — the exit is green!";
+    }
+  } else if(open && camera.position.distanceTo(door.position)<3){
+    msg.textContent="ROOM COMPLETE! Prototype finished.";
+  }
+}
+function update(){
+  const speed=keys.ShiftLeft?5.5:3.2;
+  const dt=Math.min(clock.getDelta(),.05);
+  if(controls.isLocked){
+    const dir=new THREE.Vector3(
+      (keys.KeyD?1:0)-(keys.KeyA?1:0),0,
+      (keys.KeyS?1:0)-(keys.KeyW?1:0)
+    );
+    if(dir.lengthSq()) {dir.normalize();controls.moveRight(dir.x*speed*dt);controls.moveForward(dir.z*speed*dt);}
+    camera.position.y=1.7;
+    camera.position.x=Math.max(-6.2,Math.min(6.2,camera.position.x));
+    camera.position.z=Math.max(-6.2,Math.min(6.2,camera.position.z));
+    if(carrying){
+      cube.position.copy(camera.position);
+      const f=new THREE.Vector3();camera.getWorldDirection(f);
+      cube.position.addScaledVector(f,1.6);cube.position.y-=.45;
+    }
+  }
+  renderer.render(scene,camera);
+}
+const clock=new THREE.Clock();
+function loop(){requestAnimationFrame(loop);update();}
+loop();
+
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+</script>
+</body>
+</html>

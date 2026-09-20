@@ -14,105 +14,150 @@ button{padding:8px 12px;border:0;border-radius:7px;cursor:pointer}
 </head>
 <body>
 <div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · Mouse: look · E: interact<br>Put the blue cube on the pressure plate.</div>
-<div id="msg">Click the room to start</div><div id="cross"></div>
+<div id="msg">Click the room to start</div><div id="cross">+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x080b10);
-scene.fog=new THREE.Fog(0x080b10,18,45);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111722);
 
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.05,100);
-camera.position.set(0,1.7,5.5);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.7, 5);
 
-const renderer=new THREE.WebGLRenderer({antialias:false});
-renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.15));
-renderer.shadowMap.enabled=false;
+const renderer = new THREE.WebGLRenderer({antialias:false});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1);
+renderer.outputEncoding = THREE.sRGBEncoding;
 document.body.appendChild(renderer.domElement);
 
-const msg=document.getElementById("msg");
-let locked=false,yaw=0,pitch=0;
-renderer.domElement.addEventListener("click",()=>renderer.domElement.requestPointerLock());
-document.addEventListener("pointerlockchange",()=>{locked=document.pointerLockElement===renderer.domElement;msg.textContent=locked?"Find the blue cube.":"Click the room to start";});
-document.addEventListener("mousemove",e=>{
- if(!locked)return;
- yaw-=e.movementX*0.0025;
- pitch-=e.movementY*0.0025;
- pitch=Math.max(-1.45,Math.min(1.45,pitch));
+const hemi = new THREE.HemisphereLight(0xffffff, 0x303540, 1.4);
+scene.add(hemi);
+const light = new THREE.PointLight(0xffffff, 1.2, 30);
+light.position.set(0, 4, 1);
+scene.add(light);
+
+function material(color){
+  return new THREE.MeshLambertMaterial({color:color});
+}
+function box(size, pos, color){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(size[0],size[1],size[2]), material(color));
+  m.position.set(pos[0],pos[1],pos[2]);
+  scene.add(m);
+  return m;
+}
+
+/* Room */
+box([14,.2,14],[0,0,0],0x343b46);
+box([14,4.5,.2],[0,2.25,-7],0x252c36);
+box([14,4.5,.2],[0,2.25,7],0x252c36);
+box([.2,4.5,14],[-7,2.25,0],0x252c36);
+box([.2,4.5,14],[7,2.25,0],0x252c36);
+
+/* Door */
+box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
+const door = box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
+
+/* Puzzle objects */
+const plate = box([2.2,.12,2.2],[-3,.16,-2],0xb32632);
+const cube = box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
+box([.8,.15,.5],[4,.2,3],0xf0b51a);
+box([1.2,.15,.35],[4,.3,-4],0xffd84d);
+
+/* Decorative panels */
+for(let i=-2;i<=2;i++) box([1.7,1.8,.1],[i*2.3,1.5,-6.5],0x3a4350);
+
+/* Simple player controls */
+const keys = {};
+let locked = false, yaw = 0, pitch = 0;
+let carrying = false, solved = false;
+
+addEventListener("keydown", e => {
+  keys[e.code] = true;
+  if(e.code === "KeyE") interact();
 });
-function updateCamera(){
- camera.rotation.order="YXZ";
- camera.rotation.y=yaw;
- camera.rotation.x=pitch;
-}
+addEventListener("keyup", e => keys[e.code] = false);
 
-const ambient=new THREE.HemisphereLight(0xb9d5ff,0x20242c,1.8);
-scene.add(ambient);
-const lamp=new THREE.PointLight(0xffffff,45,25);
-lamp.position.set(0,4.2,0);scene.add(lamp);
-
-function box(name,size,pos,color){
- const m=new THREE.Mesh(new THREE.BoxGeometry(...size),new THREE.MeshStandardMaterial({color}));
- m.name=name;m.position.set(...pos);scene.add(m);return m;
-}
-function cylinder(name,r,h,pos,color){
- const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,20),new THREE.MeshStandardMaterial({color}));
- m.name=name;m.position.set(...pos);scene.add(m);return m;
-}
-
-box("Floor",[14,.2,14],[0,0,0],0x303741);
-for(const [x,z,rx,rz] of [[0,-7,14,.2],[0,7,14,.2],[-7,0,.2,14],[7,0,.2,14]])box("Wall",[rx,4.5,rz],[x,2.25,z],0x222831);
-box("DoorFrame",[3,4.2,.35],[0,2.1,-6.78],0x59636f);
-const door=box("ExitDoor",[2.6,3.8,.25],[0,1.9,-6.62],0x8b202b);
-const plate=box("PressurePlate",[2.2,.12,2.2],[-3,.16,-2],0x6b1721);
-const cube=box("PuzzleCube",[1.15,1.15,1.15],[2,.75,-2],0x198cff);
-cylinder("Button",.32,.16,[4,.18,3],0xe7b21c);
-box("Key",[.9,.12,.3],[4,.3,-4],0xffd85a);
-
-for(let i=-2;i<=2;i++)box("WallPanel",[1.8,2,.12],[i*2.3,1.5,-6.5],0x313944);
-
-const keys={};let carrying=false,open=false;
-addEventListener("keydown",e=>{keys[e.code]=true;if(e.code==="KeyE")interact();});
-addEventListener("keyup",e=>keys[e.code]=false);
+renderer.domElement.addEventListener("click", () => {
+  if(renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
+});
+document.addEventListener("pointerlockchange", () => {
+  locked = document.pointerLockElement === renderer.domElement;
+  document.getElementById("msg").textContent = locked ? "Find the blue cube." : "Click the room to start";
+});
+document.addEventListener("mousemove", e => {
+  if(!locked) return;
+  yaw -= e.movementX * 0.002;
+  pitch -= e.movementY * 0.002;
+  pitch = Math.max(-1.35, Math.min(1.35, pitch));
+});
 
 function interact(){
- if(!locked)return;
- const d=camera.position.distanceTo(cube.position);
- if(!carrying&&d<2.2){carrying=true;msg.textContent="Cube picked up — take it to the red plate.";}
- else if(carrying&&camera.position.distanceTo(plate.position)<2.6){
-  carrying=false;cube.position.set(plate.position.x,.75,plate.position.z);
-  open=true;door.material.color.set(0x1d9b5a);
-  msg.textContent="LOCK OPEN — reach the green door!";
- }else if(open&&camera.position.distanceTo(door.position)<3)msg.textContent="ROOM COMPLETE!";
+  if(!locked) return;
+
+  if(!carrying && camera.position.distanceTo(cube.position) < 2.2){
+    carrying = true;
+    document.getElementById("msg").textContent = "Cube picked up! Take it to the red plate.";
+    return;
+  }
+
+  if(carrying && camera.position.distanceTo(plate.position) < 2.5){
+    carrying = false;
+    cube.position.set(plate.position.x,.75,plate.position.z);
+    solved = true;
+    door.material.color.set(0x20aa63);
+    document.getElementById("msg").textContent = "LOCK OPEN! Reach the green door.";
+    return;
+  }
+
+  if(solved && camera.position.distanceTo(door.position) < 3){
+    document.getElementById("msg").textContent = "ROOM COMPLETE!";
+  }
 }
 
-const clock=new THREE.Clock();
+const clock = new THREE.Clock();
+
 function loop(){
- requestAnimationFrame(loop);
- const dt=Math.min(clock.getDelta(),.05);
- if(locked){
-  updateCamera();
-  const speed=keys.ShiftLeft?5.5:3.2;
-  const forward=new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
-  const right=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
-  const move=new THREE.Vector3();
-  if(keys.KeyW)move.add(forward);if(keys.KeyS)move.sub(forward);
-  if(keys.KeyD)move.add(right);if(keys.KeyA)move.sub(right);
-  if(move.lengthSq())move.normalize().multiplyScalar(speed*dt);
-  camera.position.add(move);
-  camera.position.x=Math.max(-6.2,Math.min(6.2,camera.position.x));
-  camera.position.z=Math.max(-6.2,Math.min(6.2,camera.position.z));
-  camera.position.y=1.7;
-  if(carrying){
-   cube.position.copy(camera.position).add(forward.clone().multiplyScalar(1.6));
-   cube.position.y=1.15;
+  requestAnimationFrame(loop);
+
+  const dt = Math.min(clock.getDelta(), .05);
+
+  camera.rotation.order = "YXZ";
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
+
+  if(locked){
+    const speed = keys.ShiftLeft ? 5 : 2.8;
+    const forward = new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
+    const right = new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
+    const move = new THREE.Vector3();
+
+    if(keys.KeyW) move.add(forward);
+    if(keys.KeyS) move.sub(forward);
+    if(keys.KeyD) move.add(right);
+    if(keys.KeyA) move.sub(right);
+
+    if(move.lengthSq() > 0) move.normalize().multiplyScalar(speed * dt);
+
+    camera.position.add(move);
+    camera.position.x = Math.max(-6.2,Math.min(6.2,camera.position.x));
+    camera.position.z = Math.max(-6.2,Math.min(6.2,camera.position.z));
+    camera.position.y = 1.7;
+
+    if(carrying){
+      cube.position.copy(camera.position);
+      cube.position.y = 1.05;
+      cube.position.add(forward.clone().multiplyScalar(1.5));
+    }
   }
- }
- renderer.render(scene,camera);
+
+  renderer.render(scene,camera);
 }
 loop();
 
-addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+addEventListener("resize",()=>{
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 </script>
 </body>
 </html>

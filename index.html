@@ -13,7 +13,7 @@ button{padding:8px 12px;border:0;border-radius:7px;cursor:pointer}
 </style>
 </head>
 <body>
-<div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Put the blue cube on the pressure plate.</div>
+<div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Red + Blue = Purple<br>Bring the red and blue cubes together, then put the purple cube on the plate.</div>
 <div id="msg">Click the room to start</div><div id="cross">+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -58,7 +58,10 @@ const door = box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
 
 /* Puzzle objects */
 const plate = box([2.2,.12,2.2],[-3,.16,-2],0xb32632);
-const cube = box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
+const redCube = box([1.1,1.1,1.1],[-2,.75,-2],0xff2028);
+const blueCube = box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
+let purpleCube = null;
+let heldCube = null;
 box([.8,.15,.5],[4,.2,3],0xf0b51a);
 box([1.2,.15,.35],[4,.3,-4],0xffd84d);
 
@@ -94,27 +97,48 @@ document.addEventListener("mousemove", e => {
   pitch = Math.max(-1.35, Math.min(1.35, pitch));
 });
 
+function combineIfTouching(){
+  if(purpleCube || !redCube || !blueCube) return;
+  if(redCube.position.distanceTo(blueCube.position) < 1.25){
+    scene.remove(redCube);
+    scene.remove(blueCube);
+    purpleCube = box([1.15,1.15,1.15],[
+      (redCube.position.x+blueCube.position.x)/2,
+      .75,
+      (redCube.position.z+blueCube.position.z)/2
+    ],0x8a2be2);
+    document.getElementById("msg").textContent="RED + BLUE = PURPLE! Pick up the purple cube.";
+  }
+}
 function interact(){
   if(!locked) return;
 
-  if(!carrying && camera.position.distanceTo(cube.position) < 2.2){
-    carrying = true;
-    document.getElementById("msg").textContent = "Cube picked up! Take it to the red plate.";
-    return;
-  }
-
-  if(carrying && camera.position.distanceTo(plate.position) < 2.5){
-    carrying = false;
-    cube.position.set(plate.position.x,.75,plate.position.z);
-    solved = true;
+  if(!carrying){
+    const target = purpleCube || redCube || blueCube;
+    if(target && camera.position.distanceTo(target.position) < 2.2){
+      heldCube=target;
+      carrying=true;
+      document.getElementById("msg").textContent =
+        target===purpleCube ? "Purple cube picked up! Take it to the plate." :
+        "Cube picked up. Bring the red and blue cubes together.";
+      return;
+    }
+  } else if(heldCube===purpleCube && camera.position.distanceTo(plate.position) < 2.5){
+    carrying=false;
+    heldCube=null;
+    purpleCube.position.set(plate.position.x,.75,plate.position.z);
+    open=true;
     door.material.color.set(0x20aa63);
-    document.getElementById("msg").textContent = "LOCK OPEN! Reach the green door.";
+    document.getElementById("msg").textContent="PURPLE CUBE ON PLATE! DOOR UNLOCKED!";
     return;
+  } else if(heldCube){
+    carrying=false;
+    heldCube=null;
+    document.getElementById("msg").textContent="Cube dropped.";
   }
 
-  if(solved && camera.position.distanceTo(door.position) < 3){
-    document.getElementById("msg").textContent = "ROOM COMPLETE!";
-  }
+  if(open && camera.position.distanceTo(door.position)<3)
+    document.getElementById("msg").textContent="ROOM COMPLETE!";
 }
 
 const clock = new THREE.Clock();
@@ -151,11 +175,14 @@ function loop(){
     camera.position.z = Math.max(-6.2,Math.min(6.2,camera.position.z));
     camera.position.y = 1.7;
 
-    if(carrying){
-      cube.position.copy(camera.position);
-      cube.position.y = 1.05;
-      cube.position.add(forward.clone().multiplyScalar(1.5));
+    if(carrying && heldCube){
+      heldCube.position.copy(camera.position);
+      heldCube.position.y = 1.05;
+      heldCube.position.add(forward.clone().multiplyScalar(1.5));
     }
+
+    // If both cubes are on the floor, check whether they are touching.
+    if(!carrying) combineIfTouching();
   }
 
   renderer.render(scene,camera);

@@ -179,9 +179,9 @@ function buildLevel5(){
   clearPuzzle(); makeRoom(); resetPlayer();
   box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
   level5.door=box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
-  level5.button=box([1.4,.18,1.4],[0,.2,-1.0],0xd52b36);
+  level5.button=box([1.4,.18,1.4],[0,.2,3.8],0xd52b36);
   level5.open=false; level5.time=0; level5.started=false;
-  setHUD("<b>LEVEL 5 — BEAT THE TIMER</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Press the button, then reach the door before time runs out!<br>⏱️ You have 6 seconds. The door is far away!");
+  setHUD("<b>LEVEL 5 — BEAT THE TIMER</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Press the button, then sprint across the room to the door before time runs out!<br>⏱️ You have 6 seconds.");
   msg.textContent="Press the red button and RUN!";
 }
 

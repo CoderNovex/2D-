@@ -15,9 +15,17 @@ button{padding:8px 12px;border:0;border-radius:7px;cursor:pointer}
 <body>
 <div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · Mouse: look · E: interact<br>Put the blue cube on the pressure plate.</div>
 <div id="msg">Click the room to start</div><div id="cross"></div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
 <script type="module">
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-import { PointerLockControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/PointerLockControls.js";
+import * as THREE from "three";
+import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x080b10);

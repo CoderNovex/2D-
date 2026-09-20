@@ -13,7 +13,7 @@ button{padding:8px 12px;border:0;border-radius:7px;cursor:pointer}
 </style>
 </head>
 <body>
-<div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · Mouse: look · E: interact<br>Put the blue cube on the pressure plate.</div>
+<div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Put the blue cube on the pressure plate.</div>
 <div id="msg">Click the room to start</div><div id="cross">+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -129,7 +129,8 @@ function loop(){
   camera.rotation.x = pitch;
 
   if(locked){
-    const speed = keys.ShiftLeft ? 5 : 2.8;
+    const sprinting = keys.ShiftLeft || keys.ShiftRight;
+    const speed = sprinting ? 6.5 : 2.8;
     // Standard FPS controls: W forward, S backward, A left, D right.
     const forward = new THREE.Vector3(0,0,-1);
     const right = new THREE.Vector3(1,0,0);

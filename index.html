@@ -1,199 +1,141 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Room Puzzle — Prototype 01</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Room Puzzle</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;font-family:Arial,sans-serif}
-#hud{position:fixed;left:16px;top:16px;color:#fff;background:rgba(0,0,0,.55);padding:12px 14px;border:1px solid #33404f;border-radius:10px;z-index:5;line-height:1.5}
-#msg{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.7);padding:10px 16px;border-radius:8px;z-index:5;min-width:220px;text-align:center}
+#hud{position:fixed;left:16px;top:16px;color:#fff;background:rgba(0,0,0,.62);padding:12px 14px;border:1px solid #33404f;border-radius:10px;z-index:5;line-height:1.5}
+#msg{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.75);padding:10px 16px;border-radius:8px;z-index:5;min-width:260px;text-align:center}
 #cross{position:fixed;left:50%;top:50%;width:8px;height:8px;margin:-4px;border:1px solid #fff;border-radius:50%;z-index:4;pointer-events:none}
-button{padding:8px 12px;border:0;border-radius:7px;cursor:pointer}
-</style>
-</head>
-<body>
-<div id="hud"><b>ROOM 01 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Red + Blue = Purple<br>Bring the red and blue cubes together, then put the purple cube on the plate.</div>
-<div id="msg">Click the room to start</div><div id="cross">+</div>
+</style></head><body>
+<div id="hud"></div><div id="msg">Click the room to start</div><div id="cross">+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111722);
+const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);
+camera.position.set(0,1.7,5);
+const renderer=new THREE.WebGLRenderer({antialias:false});
+renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(1); renderer.outputEncoding=THREE.sRGBEncoding; document.body.appendChild(renderer.domElement);
 
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1.7, 5);
+const hemi=new THREE.HemisphereLight(0xffffff,0x303540,1.4); scene.add(hemi);
+const light=new THREE.PointLight(0xffffff,1.2,30); light.position.set(0,4,1); scene.add(light);
+const hud=document.getElementById("hud"), msg=document.getElementById("msg");
+const keys={}; let locked=false,yaw=0,pitch=0,level=1,carrying=false,held=null;
+let level1={red:null,blue:null,purple:null,plate:null,door:null,open:false};
+let level2={buttons:[],sequence:[0,1,2],next:0,door:null,open:false};
 
-const renderer = new THREE.WebGLRenderer({antialias:false});
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(1);
-renderer.outputEncoding = THREE.sRGBEncoding;
-document.body.appendChild(renderer.domElement);
-
-const hemi = new THREE.HemisphereLight(0xffffff, 0x303540, 1.4);
-scene.add(hemi);
-const light = new THREE.PointLight(0xffffff, 1.2, 30);
-light.position.set(0, 4, 1);
-scene.add(light);
-
-function material(color){
-  return new THREE.MeshLambertMaterial({color:color});
+function mat(c){return new THREE.MeshLambertMaterial({color:c});}
+function box(s,p,c){const m=new THREE.Mesh(new THREE.BoxGeometry(...s),mat(c));m.position.set(...p);scene.add(m);return m;}
+function setHUD(t){hud.innerHTML=t;}
+function clearPuzzle(){
+  scene.children.slice().forEach(o=>{if(o.isMesh && o!==renderer.domElement) scene.remove(o);});
+  // restore lights after clearing only meshes
 }
-function box(size, pos, color){
-  const m = new THREE.Mesh(new THREE.BoxGeometry(size[0],size[1],size[2]), material(color));
-  m.position.set(pos[0],pos[1],pos[2]);
-  scene.add(m);
-  return m;
+function makeRoom(){
+  box([14,.2,14],[0,0,0],0x343b46);
+  box([14,4.5,.2],[0,2.25,-7],0x252c36); box([14,4.5,.2],[0,2.25,7],0x252c36);
+  box([.2,4.5,14],[-7,2.25,0],0x252c36); box([.2,4.5,14],[7,2.25,0],0x252c36);
+}
+function resetPlayer(){camera.position.set(0,1.7,5);yaw=0;pitch=0;carrying=false;held=null;}
+
+function buildLevel1(){
+  clearPuzzle(); makeRoom(); resetPlayer();
+  box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
+  level1.door=box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
+  level1.plate=box([2.2,.12,2.2],[-3,.16,-2],0xb32632);
+  level1.red=box([1.1,1.1,1.1],[-2,.75,-2],0xff2028);
+  level1.blue=box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
+  level1.purple=null; level1.open=false;
+  for(let i=-2;i<=2;i++)box([1.7,1.8,.1],[i*2.3,1.5,-6.5],0x3a4350);
+  setHUD("<b>LEVEL 1 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Red + 🔵 Blue = 🟣 Purple<br>Bring the red and blue cubes together, then put purple on the plate.");
+  msg.textContent="Find the red and blue cubes.";
 }
 
-/* Room */
-box([14,.2,14],[0,0,0],0x343b46);
-box([14,4.5,.2],[0,2.25,-7],0x252c36);
-box([14,4.5,.2],[0,2.25,7],0x252c36);
-box([.2,4.5,14],[-7,2.25,0],0x252c36);
-box([.2,4.5,14],[7,2.25,0],0x252c36);
+function buildLevel2(){
+  clearPuzzle(); makeRoom(); resetPlayer();
+  box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
+  level2.door=box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
+  level2.buttons=[
+    box([1.4,.18,1.4],[-3,.2,-2],0xd52b36),
+    box([1.4,.18,1.4],[0,.2,-2],0x287ee8),
+    box([1.4,.18,1.4],[3,.2,-2],0xe0b42c)
+  ];
+  level2.sequence=[0,1,2]; level2.next=0; level2.open=false;
+  setHUD("<b>LEVEL 2 — THE SEQUENCE</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Press the floor buttons in the correct order:<br>🔴 RED → 🔵 BLUE → 🟡 YELLOW");
+  msg.textContent="Find the first button: RED.";
+}
 
-/* Door */
-box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
-const door = box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
+function nextLevel(){level=2;buildLevel2();}
 
-/* Puzzle objects */
-const plate = box([2.2,.12,2.2],[-3,.16,-2],0xb32632);
-const redCube = box([1.1,1.1,1.1],[-2,.75,-2],0xff2028);
-const blueCube = box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
-let purpleCube = null;
-let heldCube = null;
-box([.8,.15,.5],[4,.2,3],0xf0b51a);
-box([1.2,.15,.35],[4,.3,-4],0xffd84d);
-
-/* Decorative panels */
-for(let i=-2;i<=2;i++) box([1.7,1.8,.1],[i*2.3,1.5,-6.5],0x3a4350);
-
-/* Simple player controls */
-const keys = {};
-let locked = false, yaw = 0, pitch = 0;
-let carrying = false, solved = false;
-
-addEventListener("keydown", e => {
-  if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code)) e.preventDefault();
-  keys[e.code] = true;
-  if(e.code === "KeyE") interact();
-});
-addEventListener("keyup", e => {
-  if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code)) e.preventDefault();
-  keys[e.code] = false;
-});
-
-renderer.domElement.addEventListener("click", () => {
-  if(!locked && renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
-});
-document.addEventListener("pointerlockchange", () => {
-  locked = document.pointerLockElement === renderer.domElement;
-  document.getElementById("msg").textContent = locked ? "Find the blue cube." : "Click the room to start";
-});
-document.addEventListener("mousemove", e => {
-  if(!locked) return;
-  yaw -= e.movementX * 0.002;
-  pitch -= e.movementY * 0.002;
-  pitch = Math.max(-1.35, Math.min(1.35, pitch));
-});
-
-function combineIfTouching(){
-  if(purpleCube || !redCube || !blueCube) return;
-  if(redCube.position.distanceTo(blueCube.position) < 1.25){
-    scene.remove(redCube);
-    scene.remove(blueCube);
-    purpleCube = box([1.15,1.15,1.15],[
-      (redCube.position.x+blueCube.position.x)/2,
-      .75,
-      (redCube.position.z+blueCube.position.z)/2
-    ],0x8a2be2);
-    document.getElementById("msg").textContent="RED + BLUE = PURPLE! Pick up the purple cube.";
+function combineLevel1(){
+  if(level!==1||level1.purple||!level1.red||!level1.blue||carrying)return;
+  if(level1.red.position.distanceTo(level1.blue.position)<1.25){
+    const p=new THREE.Vector3().addVectors(level1.red.position,level1.blue.position).multiplyScalar(.5); p.y=.75;
+    scene.remove(level1.red);scene.remove(level1.blue);
+    level1.red=null;level1.blue=null;
+    level1.purple=box([1.15,1.15,1.15],[p.x,p.y,p.z],0x8a2be2);
+    msg.textContent="RED + BLUE = PURPLE! Pick it up and place it on the plate.";
   }
 }
+
 function interact(){
-  if(!locked) return;
-
-  if(!carrying){
-    const target = purpleCube || redCube || blueCube;
-    if(target && camera.position.distanceTo(target.position) < 2.2){
-      heldCube=target;
-      carrying=true;
-      document.getElementById("msg").textContent =
-        target===purpleCube ? "Purple cube picked up! Take it to the plate." :
-        "Cube picked up. Bring the red and blue cubes together.";
+  if(!locked)return;
+  if(level===1){
+    if(!carrying){
+      const targets=[level1.purple,level1.red,level1.blue].filter(Boolean);
+      let target=null,dist=999;
+      for(const t of targets){const d=camera.position.distanceTo(t.position);if(d<dist){dist=d;target=t;}}
+      if(target&&dist<2.2){
+        held=target;carrying=true;
+        msg.textContent=target===level1.purple?"Purple cube picked up. Take it to the plate.":"Cube picked up. Bring it next to the other cube.";
+        return;
+      }
+    }else if(held===level1.purple&&camera.position.distanceTo(level1.plate.position)<2.5){
+      carrying=false;held=null;level1.purple.position.set(level1.plate.position.x,.75,level1.plate.position.z);
+      level1.open=true;level1.door.material.color.set(0x20aa63);
+      msg.textContent="PURPLE CUBE ON PLATE! Go to the green door.";
       return;
+    }else if(held){carrying=false;held=null;msg.textContent="Cube dropped.";}
+    if(level1.open&&camera.position.distanceTo(level1.door.position)<3){nextLevel();return;}
+  }else{
+    for(let i=0;i<level2.buttons.length;i++){
+      if(camera.position.distanceTo(level2.buttons[i].position)<2){
+        if(i===level2.sequence[level2.next]){
+          level2.buttons[i].material.color.set(0x35d879); level2.next++;
+          if(level2.next===level2.sequence.length){
+            level2.open=true;level2.door.material.color.set(0x20aa63);msg.textContent="SEQUENCE COMPLETE! Go to the green door.";
+          }else msg.textContent="Correct! Now press "+(["RED","BLUE","YELLOW"][level2.sequence[level2.next]])+".";
+        }else{
+          level2.next=0;level2.buttons.forEach((b,j)=>b.material.color.set([0xd52b36,0x287ee8,0xe0b42c][j]));
+          msg.textContent="Wrong order! The sequence reset. Start with RED.";
+        }
+        return;
+      }
     }
-  } else if(heldCube===purpleCube && camera.position.distanceTo(plate.position) < 2.5){
-    carrying=false;
-    heldCube=null;
-    purpleCube.position.set(plate.position.x,.75,plate.position.z);
-    open=true;
-    door.material.color.set(0x20aa63);
-    document.getElementById("msg").textContent="PURPLE CUBE ON PLATE! DOOR UNLOCKED!";
-    return;
-  } else if(heldCube){
-    carrying=false;
-    heldCube=null;
-    document.getElementById("msg").textContent="Cube dropped.";
+    if(level2.open&&camera.position.distanceTo(level2.door.position)<3){msg.textContent="LEVEL 2 COMPLETE! 🎉";return;}
   }
-
-  if(open && camera.position.distanceTo(door.position)<3)
-    document.getElementById("msg").textContent="ROOM COMPLETE!";
 }
 
-const clock = new THREE.Clock();
+addEventListener("keydown",e=>{if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();keys[e.code]=true;if(e.code==="KeyE")interact();});
+addEventListener("keyup",e=>{if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();keys[e.code]=false;});
+renderer.domElement.addEventListener("click",()=>{if(!locked&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock();});
+document.addEventListener("pointerlockchange",()=>{locked=document.pointerLockElement===renderer.domElement;if(!locked)msg.textContent="Click the room to start";});
+document.addEventListener("mousemove",e=>{if(!locked)return;yaw-=e.movementX*.002;pitch-=e.movementY*.002;pitch=Math.max(-1.35,Math.min(1.35,pitch));});
 
+const clock=new THREE.Clock();
 function loop(){
-  requestAnimationFrame(loop);
-
-  const dt = Math.min(clock.getDelta(), .05);
-
-  camera.rotation.order = "YXZ";
-  camera.rotation.y = yaw;
-  camera.rotation.x = pitch;
-
-  if(locked){
-    const sprinting = keys.ShiftLeft || keys.ShiftRight;
-    const speed = sprinting ? 6.5 : 2.8;
-    // Standard FPS controls: W forward, S backward, A left, D right.
-    const forward = new THREE.Vector3(0,0,-1);
-    const right = new THREE.Vector3(1,0,0);
-    const rotation = new THREE.Matrix4().makeRotationY(yaw);
-    forward.applyMatrix4(rotation);
-    right.applyMatrix4(rotation);
-
-    const move = new THREE.Vector3();
-    if(keys.KeyW) move.add(forward);
-    if(keys.KeyS) move.sub(forward);
-    if(keys.KeyD) move.add(right);
-    if(keys.KeyA) move.sub(right);
-
-    if(move.lengthSq() > 0) move.normalize().multiplyScalar(speed * dt);
-
-    camera.position.add(move);
-    camera.position.x = Math.max(-6.2,Math.min(6.2,camera.position.x));
-    camera.position.z = Math.max(-6.2,Math.min(6.2,camera.position.z));
-    camera.position.y = 1.7;
-
-    if(carrying && heldCube){
-      heldCube.position.copy(camera.position);
-      heldCube.position.y = 1.05;
-      heldCube.position.add(forward.clone().multiplyScalar(1.5));
-    }
-
-    // If both cubes are on the floor, check whether they are touching.
-    if(!carrying) combineIfTouching();
-  }
-
-  renderer.render(scene,camera);
+ requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);
+ camera.rotation.order="YXZ";camera.rotation.y=yaw;camera.rotation.x=pitch;
+ if(locked){
+  const speed=(keys.ShiftLeft||keys.ShiftRight)?6.5:2.8;
+  const f=new THREE.Vector3(0,0,-1),r=new THREE.Vector3(1,0,0),rot=new THREE.Matrix4().makeRotationY(yaw);
+  f.applyMatrix4(rot);r.applyMatrix4(rot);const move=new THREE.Vector3();
+  if(keys.KeyW)move.add(f);if(keys.KeyS)move.sub(f);if(keys.KeyD)move.add(r);if(keys.KeyA)move.sub(r);
+  if(move.lengthSq())move.normalize().multiplyScalar(speed*dt);
+  camera.position.add(move);camera.position.x=Math.max(-6.2,Math.min(6.2,camera.position.x));camera.position.z=Math.max(-6.2,Math.min(6.2,camera.position.z));camera.position.y=1.7;
+  if(carrying&&held){held.position.copy(camera.position);held.position.y=1.05;held.position.add(f.clone().multiplyScalar(1.5));}
+  combineLevel1();
+ }
+ renderer.render(scene,camera);
 }
-loop();
-
-addEventListener("resize",()=>{
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
-</script>
-</body>
-</html>
+buildLevel1();loop();
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+</script></body></html>

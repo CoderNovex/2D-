@@ -18,7 +18,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;fon
 #testMode button{cursor:pointer}
 #testMode small{display:block;color:#b9c2cc}
 </style></head><body>
-<div id="hud"></div>
+<div id="hud" style="display:none"></div>
 <div id="testMode" style="display:none">
   <b>🧪 TEST MODE</b>
   <label>Level:
@@ -31,7 +31,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;fon
   <button id="nextTestLevel">NEXT LEVEL</button>
   <small>T = toggle · 1–9 = level · 0 = level 10</small>
 </div>
-<div id="msg">Click the room to start</div><div id="cross">+</div>
+<div id="msg" style="display:none">Click the room to start</div><div id="cross">+</div>
 <div id="mobileControls"><div id="joy"><div id="stick"></div></div><div id="lookArea"></div><button id="sprintBtn" type="button">SPRINT</button><button id="interactBtn" type="button">E</button></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>

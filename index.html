@@ -6,8 +6,25 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;fon
 #hud{position:fixed;left:16px;top:16px;color:#fff;background:rgba(0,0,0,.62);padding:12px 14px;border:1px solid #33404f;border-radius:10px;z-index:5;line-height:1.5}
 #msg{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.75);padding:10px 16px;border-radius:8px;z-index:5;min-width:260px;text-align:center}
 #cross{position:fixed;left:50%;top:50%;width:8px;height:8px;margin:-4px;border:1px solid #fff;border-radius:50%;z-index:4;pointer-events:none}
+#testMode{position:fixed;right:16px;top:16px;color:#fff;background:rgba(10,12,18,.92);padding:12px;border:1px solid #596778;border-radius:10px;z-index:10;line-height:1.7;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+#testMode select,#testMode button{margin:4px 2px;padding:5px 7px;border-radius:6px;border:1px solid #66717e;background:#202832;color:#fff}
+#testMode button{cursor:pointer}
+#testMode small{display:block;color:#b9c2cc}
 </style></head><body>
-<div id="hud"></div><div id="msg">Click the room to start</div><div id="cross">+</div>
+<div id="hud"></div>
+<div id="testMode" style="display:none">
+  <b>🧪 TEST MODE</b>
+  <label>Level:
+    <select id="testLevel">
+      <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+    </select>
+  </label>
+  <button id="loadLevel">LOAD LEVEL</button>
+  <button id="nextTestLevel">NEXT LEVEL</button>
+  <small>T = toggle · 1–9 = level · 0 = level 10</small>
+</div>
+<div id="msg">Click the room to start</div><div id="cross">+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);
@@ -18,6 +35,8 @@ renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(1); renderer.ou
 const hemi=new THREE.HemisphereLight(0xffffff,0x303540,1.4); scene.add(hemi);
 const light=new THREE.PointLight(0xffffff,1.2,30); light.position.set(0,4,1); scene.add(light);
 const hud=document.getElementById("hud"), msg=document.getElementById("msg");
+const testMode=document.getElementById("testMode"), testLevel=document.getElementById("testLevel");
+let testModeOn=false;
 const keys={}; let locked=false,yaw=0,pitch=0,level=1,carrying=false,held=null;
 let level1={red:null,blue:null,purple:null,plate:null,door:null,open:false};
 let level2={buttons:[],sequence:[0,1,2],next:0,door:null,open:false};
@@ -86,6 +105,29 @@ function buildLevel2(){
 
 function nextLevel(){level=2;buildLevel2();}
 
+function loadTestLevel(n){
+  n=Number(n);
+  if(n===1){level=1;buildLevel1();return;}
+  if(n===2){level=2;buildLevel2();return;}
+  msg.textContent="Level "+n+" is not built yet. You can still select it for future testing.";
+  testLevel.value=String(n);
+}
+
+function toggleTestMode(){
+  testModeOn=!testModeOn;
+  testMode.style.display=testModeOn?"block":"none";
+  msg.textContent=testModeOn
+    ?"🧪 Test Mode ON — choose a level or press 1–9 / 0."
+    :"Test Mode OFF";
+  if(testModeOn) testLevel.value=String(level);
+}
+
+document.getElementById("loadLevel").addEventListener("click",()=>loadTestLevel(testLevel.value));
+document.getElementById("nextTestLevel").addEventListener("click",()=>{
+  const n=Math.min(10,Number(testLevel.value)+1);
+  testLevel.value=String(n); loadTestLevel(n);
+});
+
 function combineLevel1(){
   if(level!==1||level1.purple||!level1.red||!level1.blue||carrying)return;
   if(level1.red.position.distanceTo(level1.blue.position)<1.25){
@@ -135,7 +177,16 @@ function interact(){
   }
 }
 
-addEventListener("keydown",e=>{if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();keys[e.code]=true;if(e.code==="KeyE")interact();});
+addEventListener("keydown",e=>{
+  if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();
+  if(e.code==="KeyT"){toggleTestMode();return;}
+  if(testModeOn){
+    const levelKey={Digit1:1,Digit2:2,Digit3:3,Digit4:4,Digit5:5,Digit6:6,Digit7:7,Digit8:8,Digit9:9,Digit0:10}[e.code];
+    if(levelKey){testLevel.value=String(levelKey);loadTestLevel(levelKey);return;}
+  }
+  keys[e.code]=true;
+  if(e.code==="KeyE")interact();
+});
 addEventListener("keyup",e=>{if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();keys[e.code]=false;});
 renderer.domElement.addEventListener("click",()=>{if(!locked&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock();});
 document.addEventListener("pointerlockchange",()=>{locked=document.pointerLockElement===renderer.domElement;if(!locked)msg.textContent="Click the room to start";});

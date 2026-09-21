@@ -54,6 +54,7 @@ let level2={buttons:[],sequence:[0,1,2],next:0,door:null,open:false};
 let level3={boxes:[],plates:[],door:null,open:false};
 let level4={mirror:null,beamA:null,beamB:null,receiver:null,door:null,open:false,state:0};
 let level5={button:null,door:null,open:false,time:0,started:false};
+let level6={cores:[],plates:[],door:null,open:false};
 let doorAnim=null;
 
 function mat(c){return new THREE.MeshLambertMaterial({color:c});}
@@ -172,6 +173,7 @@ function nextLevel(){
   else if(level===2){level=3;buildLevel3();}
   else if(level===3){level=4;buildLevel4();}
   else if(level===4){level=5;buildLevel5();}
+  else if(level===5){level=6;buildLevel6();}
 }
 
 function buildLevel3(){
@@ -268,6 +270,47 @@ function updateLevel5(dt){
   }
 }
 
+function buildLevel6(){
+  doorAnim=null;
+  clearPuzzle(); makeRoom(); resetPlayer();
+  box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
+  level6.door=box([2.5,3.7,.3],[0,1.85,-6.58],0xa32935);
+
+  level6.plates=[
+    box([2.0,.12,2.0],[-3,.16,-2],0xc737d8),
+    box([2.0,.12,2.0],[3,.16,-2],0x35a8d8),
+    box([2.0,.12,2.0],[0,.16,2.5],0xd8b52e)
+  ];
+  level6.cores=[
+    box([1.0,1.0,1.0],[-3,.7,1.2],0xb83fd0),
+    box([1.0,1.0,1.0],[3,.7,1.2],0x2d9fe0),
+    box([1.0,1.0,1.0],[0,.7,4.5],0xe0b52e)
+  ];
+  level6.cores[0].userData.plate=0;
+  level6.cores[1].userData.plate=1;
+  level6.cores[2].userData.plate=2;
+  level6.open=false;
+  addWallHint("HINT: MATCH EACH CORE TO THE SAME-COLORED PLATE.",[0,2.7,-6.35],0);
+  setHUD("<b>LEVEL 6 — THE THREE CORES</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🟣 🟦 🟡 Match each core to the plate with the same color.<br>Pick up a core, carry it to its matching plate, then press E to place it.");
+  msg.textContent="Match all three cores to their plates.";
+}
+
+function updateLevel6(){
+  if(level!==6||level6.open)return;
+  let complete=true;
+  for(let i=0;i<3;i++){
+    const core=level6.cores[i],plate=level6.plates[i];
+    const on=core&&core.position.distanceTo(plate.position)<1.15;
+    if(!on)complete=false;
+    plate.material.color.set(on?[0xb83fd0,0x2d9fe0,0xe0b52e][i]:[0xc737d8,0x35a8d8,0xd8b52e][i]);
+  }
+  if(complete){
+    level6.open=true;
+    level6.door.material.color.set(0x20aa63);
+    msg.textContent="ALL THREE CORES MATCH! Go to the green door.";
+  }
+}
+
 function loadTestLevel(n){
   n=Number(n);
   if(n===1){level=1;buildLevel1();return;}
@@ -275,6 +318,7 @@ function loadTestLevel(n){
   if(n===3){level=3;buildLevel3();return;}
   if(n===4){level=4;buildLevel4();return;}
   if(n===5){level=5;buildLevel5();return;}
+  if(n===6){level=6;buildLevel6();return;}
   msg.textContent="Level "+n+" is not built yet. You can still select it for future testing.";
   testLevel.value=String(n);
 }
@@ -355,6 +399,41 @@ function interact(){
       return;
     }
     if(level5.open&&camera.position.distanceTo(level5.door.position)<3){msg.textContent="LEVEL 5 COMPLETE!";return;}
+  }else if(level===6){
+    if(!carrying){
+      let target=null,dist=999;
+      for(const core of level6.cores){
+        if(!core)continue;
+        const d=camera.position.distanceTo(core.position);
+        if(d<dist){dist=d;target=core;}
+      }
+      if(target&&dist<2.2){
+        held=target;carrying=true;
+        msg.textContent="Core picked up. Take it to its matching plate.";
+        return;
+      }
+    }else if(held){
+      let nearest=-1,dist=999;
+      for(let i=0;i<level6.plates.length;i++){
+        const d=camera.position.distanceTo(level6.plates[i].position);
+        if(d<dist){dist=d;nearest=i;}
+      }
+      if(nearest>=0&&dist<2.4&&held.userData.plate===nearest){
+        held.position.set(level6.plates[nearest].position.x,.7,level6.plates[nearest].position.z);
+        carrying=false;held=null;
+        updateLevel6();
+        if(!level6.open)msg.textContent="Correct match! Find the next core.";
+        return;
+      }
+      carrying=false;held=null;
+      msg.textContent="Core dropped. Take it to the matching plate.";
+      updateLevel6();
+      return;
+    }
+    if(level6.open&&camera.position.distanceTo(level6.door.position)<3){
+      animateDoorOpen(level6.door,()=>{level=7;loadTestLevel(7);});
+      return;
+    }
   }
 }
 
@@ -407,6 +486,7 @@ function loop(){
   }
   combineLevel1();
   updateLevel3();
+  updateLevel6();
   updateLevel5(dt);
   updateDoorAnimation(dt);
  }

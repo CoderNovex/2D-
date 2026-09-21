@@ -305,6 +305,59 @@ function combineLevel1(){
   }
 }
 
+function interact(){
+  const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);
+  if(!locked && !mobileActive)return;
+
+  if(level===1){
+    if(!carrying){
+      const targets=[level1.purple,level1.red,level1.blue].filter(Boolean);
+      let target=null,dist=999;
+      for(const t of targets){const d=camera.position.distanceTo(t.position);if(d<dist){dist=d;target=t;}}
+      if(target&&dist<2.2){held=target;carrying=true;msg.textContent=target===level1.purple?"Purple cube picked up. Take it to the plate.":"Cube picked up. Bring it next to the other cube.";return;}
+    }else if(held===level1.purple&&camera.position.distanceTo(level1.plate.position)<2.5){
+      carrying=false;held=null;level1.purple.position.set(level1.plate.position.x,.75,level1.plate.position.z);
+      level1.open=true;level1.door.material.color.set(0x20aa63);
+      msg.textContent="PURPLE CUBE ON PLATE! Go to the green door.";return;
+    }else if(held){carrying=false;held=null;msg.textContent="Cube dropped.";return;}
+    if(level1.open&&camera.position.distanceTo(level1.door.position)<3){animateDoorOpen(level1.door,()=>nextLevel());return;}
+  }else if(level===2){
+    for(let i=0;i<level2.buttons.length;i++)if(camera.position.distanceTo(level2.buttons[i].position)<2){
+      if(i===level2.sequence[level2.next]){
+        level2.buttons[i].material.color.set(0x35d879);level2.next++;
+        if(level2.next===level2.sequence.length){level2.open=true;level2.door.material.color.set(0x20aa63);msg.textContent="SEQUENCE COMPLETE! Go to the green door.";}
+        else msg.textContent="Correct! Continue the sequence.";
+      }else{
+        level2.next=0;level2.buttons.forEach((b,j)=>b.material.color.set([0xd52b36,0x287ee8,0xe0b42c][j]));
+        msg.textContent="Wrong order! The sequence reset.";
+      } return;
+    }
+    if(level2.open&&camera.position.distanceTo(level2.door.position)<3){animateDoorOpen(level2.door,()=>nextLevel());return;}
+  }else if(level===3){
+    if(!carrying){
+      let target=null,dist=999;
+      for(const b of level3.boxes){if(!b)continue;const d=camera.position.distanceTo(b.position);if(d<dist){dist=d;target=b;}}
+      if(target&&dist<2.2){held=target;carrying=true;msg.textContent=target.userData.weight==="heavy"?"Heavy box picked up.":"Light box picked up.";return;}
+    }else if(held){
+      carrying=false;held=null;msg.textContent="Box dropped.";updateLevel3();return;
+    }
+    if(level3.open&&camera.position.distanceTo(level3.door.position)<3){animateDoorOpen(level3.door,()=>nextLevel());return;}
+  }else if(level===4){
+    if(level4.open&&camera.position.distanceTo(level4.door.position)<3){animateDoorOpen(level4.door,()=>nextLevel());return;}
+    if(level4.mirror&&camera.position.distanceTo(level4.mirror.position)<2.4){
+      level4.state=level4.state?0:1;updateLevel4();
+      msg.textContent=level4.state===1?"LASER ALIGNED! Go to the green door.":"Mirror turned away.";return;
+    }
+  }else if(level===5){
+    if(level5.button&&camera.position.distanceTo(level5.button.position)<2.2){
+      if(!level5.started){level5.started=true;level5.time=6;level5.button.material.color.set(0x35d879);msg.textContent="GO! Reach the door!";}
+      else{level5.started=false;level5.time=0;level5.button.material.color.set(0xd52b36);msg.textContent="Timer stopped.";}
+      return;
+    }
+    if(level5.open&&camera.position.distanceTo(level5.door.position)<3){msg.textContent="LEVEL 5 COMPLETE!";return;}
+  }
+}
+
 addEventListener("keydown",e=>{
   if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();
   if(e.code==="KeyT"){toggleTestMode();return;}

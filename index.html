@@ -12,13 +12,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;fon
 #lookArea{position:absolute;right:0;top:0;width:58%;height:100%;pointer-events:auto;touch-action:none}
 #interactBtn{position:absolute;right:25px;bottom:38px;width:76px;height:76px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(32,170,99,.72);color:#fff;font-size:18px;font-weight:bold;pointer-events:auto;touch-action:none}
 #sprintBtn{position:absolute;right:115px;bottom:28px;width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(255,180,30,.72);color:#111;font-size:13px;font-weight:bold;pointer-events:auto;touch-action:none}
-@media (pointer:coarse){#mobileControls{display:block} #testMode{display:none}}
-#testMode{position:fixed;right:16px;top:16px;color:#fff;background:rgba(10,12,18,.92);padding:12px;border:1px solid #596778;border-radius:10px;z-index:10;line-height:1.7;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+@media (pointer:coarse){#testMode{display:none}}
+#deviceSelect{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:30;background:rgba(10,12,18,.9);padding:7px 10px;border:1px solid #596778;border-radius:9px;color:#fff;font-size:13px}#deviceSelect button{margin:0 3px;padding:6px 10px;border-radius:6px;border:1px solid #66717e;background:#202832;color:#fff;cursor:pointer}#deviceSelect button.active{background:#35d879;color:#08110b}#testMode{position:fixed;right:16px;top:16px;color:#fff;background:rgba(10,12,18,.92);padding:12px;border:1px solid #596778;border-radius:10px;z-index:10;line-height:1.7;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 #testMode select,#testMode button{margin:4px 2px;padding:5px 7px;border-radius:6px;border:1px solid #66717e;background:#202832;color:#fff}
 #testMode button{cursor:pointer}
 #testMode small{display:block;color:#b9c2cc}
 </style></head><body>
-<div id="hud" style="display:none"></div>
+<div id="hud" style="display:none"></div><div id="deviceSelect"><button id="pcMode">PC</button><button id="mobileMode">MOBILE</button></div>
 <div id="testMode" style="display:none">
   <b>🧪 TEST MODE</b>
   <label>Level:
@@ -46,7 +46,7 @@ const hud=document.getElementById("hud"), msg=document.getElementById("msg");
 const testMode=document.getElementById("testMode"), testLevel=document.getElementById("testLevel");
 let testModeOn=false;
 const keys={}; let locked=false,yaw=0,pitch=0,level=1,carrying=false,held=null;
-const mobile={x:0,y:0,sprint:false};
+const mobile={x:0,y:0,sprint:false}; let playMode="auto";
 let level1={red:null,blue:null,purple:null,plate:null,door:null,open:false};
 let level2={buttons:[],sequence:[0,1,2],next:0,door:null,open:false};
 let level3={boxes:[],plates:[],door:null,open:false};
@@ -229,6 +229,7 @@ function toggleTestMode(){
   if(testModeOn) testLevel.value=String(level);
 }
 
+const pcMode=document.getElementById("pcMode"),mobileMode=document.getElementById("mobileMode"); function applyPlayMode(mode){playMode=mode; const isMobile=mode==="mobile" || (mode==="auto" && window.matchMedia("(pointer: coarse)").matches); document.getElementById("mobileControls").style.display=isMobile?"block":"none"; pcMode.classList.toggle("active",!isMobile); mobileMode.classList.toggle("active",isMobile); if(isMobile && document.pointerLockElement) document.exitPointerLock();} pcMode.addEventListener("click",()=>applyPlayMode("pc")); mobileMode.addEventListener("click",()=>applyPlayMode("mobile")); applyPlayMode("auto");
 document.getElementById("loadLevel").addEventListener("click",()=>loadTestLevel(testLevel.value));
 document.getElementById("nextTestLevel").addEventListener("click",()=>{
   const n=Math.min(10,Number(testLevel.value)+1);
@@ -357,7 +358,7 @@ const clock=new THREE.Clock();
 function loop(){
  requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);
  camera.rotation.order="YXZ";camera.rotation.y=yaw;camera.rotation.x=pitch;
- if(locked || (window.matchMedia("(pointer: coarse)").matches)){
+ const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);\n if(locked || mobileActive){
   const speed=((keys.ShiftLeft||keys.ShiftRight)||mobile.sprint)?6.5:2.8;
   const f=new THREE.Vector3(0,0,-1),r=new THREE.Vector3(1,0,0),rot=new THREE.Matrix4().makeRotationY(yaw);
   f.applyMatrix4(rot);r.applyMatrix4(rot);const move=new THREE.Vector3();

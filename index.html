@@ -436,10 +436,17 @@ addEventListener("keydown",e=>{
   if(e.code==="KeyE")interact();
 });
 addEventListener("keyup",e=>{if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();keys[e.code]=false;});
-let mouseDragging=false;
-renderer.domElement.addEventListener("click",()=>{if(!locked&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock();});
-renderer.domElement.addEventListener("mousedown",e=>{if(e.button===0)mouseDragging=true;});
+let mouseDragging=false,lastMouseX=0,lastMouseY=0;
+renderer.domElement.addEventListener("click",()=>{
+  if(!locked && renderer.domElement.requestPointerLock){
+    try{renderer.domElement.requestPointerLock();}catch(e){}
+  }
+});
+renderer.domElement.addEventListener("mousedown",e=>{
+  if(e.button===0){mouseDragging=true;lastMouseX=e.clientX;lastMouseY=e.clientY;}
+});
 addEventListener("mouseup",()=>{mouseDragging=false;});
+renderer.domElement.addEventListener("mouseleave",()=>{mouseDragging=false;});
 renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
 const pcMode=document.getElementById("pcMode"),mobileMode=document.getElementById("mobileMode");
 function applyPlayMode(mode){playMode=mode;const isMobile=mode==="mobile"||(mode==="auto"&&window.matchMedia("(pointer: coarse)").matches);document.getElementById("mobileControls").style.display=isMobile?"block":"none";pcMode.classList.toggle("active",!isMobile);mobileMode.classList.toggle("active",isMobile);if(isMobile&&document.pointerLockElement)document.exitPointerLock();}
@@ -458,14 +465,22 @@ document.getElementById("interactBtn").addEventListener("touchstart",e=>{e.preve
 const sprintBtn=document.getElementById("sprintBtn");
 sprintBtn.addEventListener("touchstart",e=>{e.preventDefault();mobile.sprint=true;sprintBtn.style.transform="scale(.92)"},{passive:false});
 sprintBtn.addEventListener("touchend",e=>{e.preventDefault();mobile.sprint=false;sprintBtn.style.transform="scale(1)"},{passive:false});
-document.addEventListener("pointerlockchange",()=>{locked=document.pointerLockElement===renderer.domElement;if(!locked)msg.textContent="Click the room to start";});
+document.addEventListener("pointerlockchange",()=>{
+  locked=document.pointerLockElement===renderer.domElement;
+  if(!locked)msg.textContent="Click the room to start";
+});
+document.addEventListener("pointerlockerror",()=>{
+  locked=false;
+  msg.textContent="Mouse lock unavailable — hold LEFT CLICK and drag to look.";
+});
 document.addEventListener("mousemove",e=>{
   if(locked){
-    yaw-=e.movementX*.002;
-    pitch-=e.movementY*.002;
+    yaw-=e.movementX*.0025;
+    pitch-=e.movementY*.0025;
   }else if(mouseDragging){
-    yaw-=e.movementX*.004;
-    pitch-=e.movementY*.004;
+    yaw-=(e.clientX-lastMouseX)*.006;
+    pitch-=(e.clientY-lastMouseY)*.006;
+    lastMouseX=e.clientX;lastMouseY=e.clientY;
   }else return;
   pitch=Math.max(-1.35,Math.min(1.35,pitch));
 });

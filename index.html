@@ -102,7 +102,7 @@ function buildLevel1(){
   level1.blue=box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
   level1.purple=null; level1.open=false;
   for(let i=-2;i<=2;i++)box([1.7,1.8,.1],[i*2.3,1.5,-6.5],0x3a4350);
-  addWallHint("HINT: RED + BLUE BECOME PURPLE. PUT PURPLE ON THE PLATE.",[0,2.7,-6.35],0);
+  addWallHint("HINT: PUT PURPLE ON THE PLATE.",[0,2.7,-6.35],0);
   setHUD("<b>LEVEL 1 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Red + 🔵 Blue = 🟣 Purple<br>Bring the red and blue cubes together, then put purple on the plate.");
   msg.textContent="Find the red and blue cubes.";
 }
@@ -137,7 +137,7 @@ function buildLevel2(){
   addButtonLabel(level2.buttons[0],"BLUE");
   addButtonLabel(level2.buttons[1],"YELLOW");
   addButtonLabel(level2.buttons[2],"RED");
-  addWallHint("HINT: THE BUTTON COLORS ARE NOT THE LABELS. FIND THE RED, THEN BLUE, THEN YELLOW BUTTON.",[0,2.7,-6.35],0);
+  addWallHint("HINT: SEQUENCE IS RED, BLUE, YELLOW.",[0,2.7,-6.35],0);
   level2.sequence=[0,1,2]; level2.next=0; level2.open=false;
   setHUD("<b>LEVEL 2 — THE SEQUENCE</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Press the floor buttons in the correct order:<br>🔴 RED → 🔵 BLUE → 🟡 YELLOW");
   msg.textContent="Find the first button: RED.";

@@ -60,6 +60,32 @@ function clearPuzzle(){
   scene.children.slice().forEach(o=>{if(o.isMesh && o!==renderer.domElement) scene.remove(o);});
   // restore lights after clearing only meshes
 }
+function addWallHint(text,position,rotationY=0){
+  const canvas=document.createElement("canvas");
+  canvas.width=512; canvas.height=192;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="#111820"; ctx.fillRect(0,0,512,192);
+  ctx.strokeStyle="#66717e"; ctx.lineWidth=6; ctx.strokeRect(4,4,504,184);
+  ctx.fillStyle="#35d879"; ctx.font="bold 30px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  const words=text.split(" "); let lines=[],line="";
+  for(const word of words){
+    const test=line?line+" "+word:word;
+    if(ctx.measureText(test).width>440){lines.push(line);line=word;}else line=test;
+  }
+  if(line)lines.push(line);
+  const start=96-(lines.length-1)*20;
+  lines.forEach((l,i)=>ctx.fillText(l,256,start+i*40));
+  const tex=new THREE.CanvasTexture(canvas);
+  const mesh=new THREE.Mesh(
+    new THREE.PlaneGeometry(4.8,1.8),
+    new THREE.MeshBasicMaterial({map:tex})
+  );
+  mesh.position.set(...position);
+  mesh.rotation.y=rotationY;
+  scene.add(mesh);
+  return mesh;
+}
+
 function makeRoom(){
   box([14,.2,14],[0,0,0],0x343b46);
   box([14,4.5,.2],[0,2.25,-7],0x252c36); box([14,4.5,.2],[0,2.25,7],0x252c36);
@@ -76,6 +102,7 @@ function buildLevel1(){
   level1.blue=box([1.1,1.1,1.1],[2,.75,-2],0x168cff);
   level1.purple=null; level1.open=false;
   for(let i=-2;i<=2;i++)box([1.7,1.8,.1],[i*2.3,1.5,-6.5],0x3a4350);
+  addWallHint("HINT: RED + BLUE BECOME PURPLE. PUT PURPLE ON THE PLATE.",[0,2.7,-6.35],0);
   setHUD("<b>LEVEL 1 — THE FIRST LOCK</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Red + 🔵 Blue = 🟣 Purple<br>Bring the red and blue cubes together, then put purple on the plate.");
   msg.textContent="Find the red and blue cubes.";
 }
@@ -110,6 +137,7 @@ function buildLevel2(){
   addButtonLabel(level2.buttons[0],"BLUE");
   addButtonLabel(level2.buttons[1],"YELLOW");
   addButtonLabel(level2.buttons[2],"RED");
+  addWallHint("HINT: THE BUTTON COLORS ARE NOT THE LABELS. FIND THE RED, THEN BLUE, THEN YELLOW BUTTON.",[0,2.7,-6.35],0);
   level2.sequence=[0,1,2]; level2.next=0; level2.open=false;
   setHUD("<b>LEVEL 2 — THE SEQUENCE</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>Press the floor buttons in the correct order:<br>🔴 RED → 🔵 BLUE → 🟡 YELLOW");
   msg.textContent="Find the first button: RED.";
@@ -137,6 +165,7 @@ function buildLevel3(){
   level3.boxes[0].userData.weight="heavy";
   level3.boxes[1].userData.weight="light";
   level3.open=false;
+  addWallHint("HINT: USE BOTH BOXES. PUT ONE BOX ON EACH PRESSURE PLATE.",[0,2.7,-6.35],0);
   setHUD("<b>LEVEL 3 — THE WEIGHT TEST</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🟥 Heavy box + 🟦 Light box<br>Put a box on EACH pressure plate at the same time.<br>💡 The heavy box is harder to move.");
   msg.textContent="Get both boxes onto the two pressure plates.";
 }
@@ -166,6 +195,7 @@ function buildLevel4(){
   level4.receiver=box([1.0,1.0,.35],[0,1.5,2.2],0x8b2020);
   level4.receiver.material.emissive=new THREE.Color(0x330000);
   level4.open=false; level4.state=0;
+  addWallHint("HINT: THE MIRROR CHANGES THE LASER'S PATH. TURN IT UNTIL THE BEAM REACHES THE RECEIVER.",[0,2.7,-6.35],0);
   level4.beamA=box([4.0,.12,.12],[-2.15,1.5,-4.8],0xff2020);
   level4.beamB=box([.12,.12,7.0],[0,1.5,-1.3],0xff2020);
   level4.beamB.visible=false;
@@ -194,6 +224,7 @@ function buildLevel5(){
   level5.door=box([2.5,3.7,.3],[0,1.85,-14.58],0xa32935);
   level5.button=box([1.4,.18,1.4],[0,.2,10],0xd52b36);
   level5.open=false; level5.time=0; level5.started=false;
+  addWallHint("HINT: PRESS THE RED BUTTON, THEN SPRINT ALL THE WAY TO THE DOOR.",[0,2.7,-14.7],Math.PI);
   setHUD("<b>LEVEL 5 — BEAT THE TIMER</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Press the button, then sprint across the room to the door before time runs out!<br>⏱️ You have 6 seconds.");
   msg.textContent="Press the red button and RUN!";
 }

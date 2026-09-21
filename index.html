@@ -418,7 +418,15 @@ function interact(){
       else{level5.started=false;level5.time=0;level5.button.material.color.set(0xd52b36);msg.textContent="Timer stopped.";}
       return;
     }
-    if(level5.open&&camera.position.distanceTo(level5.door.position)<3){msg.textContent="LEVEL 5 COMPLETE!";return;}
+    if(level5.started&&camera.position.distanceTo(level5.door.position)<3){
+      level5.open=true;
+      level5.started=false;
+      level5.time=0;
+      level5.button.material.color.set(0xd52b36);
+      level5.door.material.color.set(0x20aa63);
+      animateDoorOpen(level5.door,()=>nextLevel());
+      return;
+    }
   }else if(level===6){
     if(!carrying){
       let target=null,dist=999;

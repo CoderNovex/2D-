@@ -10,7 +10,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;fon
 #joy{position:absolute;left:22px;bottom:24px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.35);pointer-events:auto;touch-action:none}
 #stick{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.55)}
 #lookArea{position:absolute;right:0;top:0;width:58%;height:100%;pointer-events:auto;touch-action:none}
-#interactBtn{position:absolute;right:25px;bottom:38px;width:76px;height:76px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(32,170,99,.72);color:#fff;font-size:18px;font-weight:bold;pointer-events:auto;touch-action:none}
+#interactBtn{display:none;}
 #sprintBtn{position:absolute;right:115px;bottom:28px;width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(255,180,30,.72);color:#111;font-size:13px;font-weight:bold;pointer-events:auto;touch-action:none}
 @media (pointer:coarse){#mobileControls{display:block} #testMode{display:none}}
 #deviceSelect{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(10,12,18,.9);padding:5px 7px;border:1px solid #596778;border-radius:8px}#deviceSelect button{padding:5px 9px;margin:0 2px;border:1px solid #66717e;border-radius:5px;background:#202832;color:#fff}#deviceSelect button.active{background:#35d879;color:#08110b}#testMode{position:fixed;right:16px;top:16px;color:#fff;background:rgba(10,12,18,.92);padding:12px;border:1px solid #596778;border-radius:10px;z-index:10;line-height:1.7;box-shadow:0 4px 18px rgba(0,0,0,.35)}
@@ -32,7 +32,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b10;fon
   <small>T = toggle · 1–9 = level · 0 = level 10</small>
 </div>
 <div id="msg" style="display:none">Click the room to start</div><div id="cross">+</div>
-<div id="mobileControls"><div id="joy"><div id="stick"></div></div><div id="lookArea"></div><button id="sprintBtn" type="button">SPRINT</button><button id="interactBtn" type="button">E</button></div>
+<div id="mobileControls"><div id="joy"><div id="stick"></div></div><div id="lookArea"></div><button id="sprintBtn" type="button">SPRINT</button><button id="interactBtn" type="button" aria-hidden="true">E</button></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);
@@ -47,6 +47,8 @@ const testMode=document.getElementById("testMode"), testLevel=document.getElemen
 let testModeOn=false;
 const keys={}; let locked=false,yaw=0,pitch=0,level=1,carrying=false,held=null;
 const mobile={x:0,y:0,sprint:false}; let playMode="auto";
+let autoCooldown=0;
+let level4AutoState=0;
 let level1={red:null,blue:null,purple:null,plate:null,door:null,open:false};
 let level2={buttons:[],sequence:[0,1,2],next:0,door:null,open:false};
 let level3={boxes:[],plates:[],door:null,open:false};
@@ -278,42 +280,56 @@ function combineLevel1(){
   }
 }
 
-function interact(){
-  const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);
-  if(!locked && !mobileActive)return;
+function autoInteract(dt=0){
+  autoCooldown=Math.max(0,autoCooldown-dt);
+  if(autoCooldown>0)return;
+
   if(level===1){
     if(!carrying){
       const targets=[level1.purple,level1.red,level1.blue].filter(Boolean);
       let target=null,dist=999;
-      for(const t of targets){const d=camera.position.distanceTo(t.position);if(d<dist){dist=d;target=t;}}
-      if(target&&dist<2.2){
+      for(const t of targets){
+        const d=camera.position.distanceTo(t.position);
+        if(d<dist){dist=d;target=t;}
+      }
+      if(target&&dist<1.65){
         held=target;carrying=true;
-        msg.textContent=target===level1.purple?"Purple cube picked up. Take it to the plate.":"Cube picked up. Bring it next to the other cube.";
+        msg.textContent=target===level1.purple
+          ?"Purple cube picked up. Take it to the plate."
+          :"Cube picked up. Bring it next to the other cube.";
+        autoCooldown=.35;
         return;
       }
-    }else if(held===level1.purple&&camera.position.distanceTo(level1.plate.position)<2.5){
-      carrying=false;held=null;level1.purple.position.set(level1.plate.position.x,.75,level1.plate.position.z);
+    }else if(held===level1.purple&&camera.position.distanceTo(level1.plate.position)<1.8){
+      carrying=false;held=null;
+      level1.purple.position.set(level1.plate.position.x,.75,level1.plate.position.z);
       level1.open=true;level1.door.material.color.set(0x20aa63);
       msg.textContent="PURPLE CUBE ON PLATE! Go to the green door.";
+      autoCooldown=.5;
       return;
-    }else if(held){carrying=false;held=null;msg.textContent="Cube dropped.";}
-    if(level1.open&&camera.position.distanceTo(level1.door.position)<3){nextLevel();return;}
+    }
+    if(level1.open&&camera.position.distanceTo(level1.door.position)<2.4){nextLevel();return;}
   }else if(level===2){
     for(let i=0;i<level2.buttons.length;i++){
-      if(camera.position.distanceTo(level2.buttons[i].position)<2){
+      if(camera.position.distanceTo(level2.buttons[i].position)<1.35){
         if(i===level2.sequence[level2.next]){
           level2.buttons[i].material.color.set(0x35d879); level2.next++;
           if(level2.next===level2.sequence.length){
-            level2.open=true;level2.door.material.color.set(0x20aa63);msg.textContent="SEQUENCE COMPLETE! Go to the green door.";
-          }else msg.textContent="Correct! Now press "+(["RED","BLUE","YELLOW"][level2.sequence[level2.next]])+".";
+            level2.open=true;level2.door.material.color.set(0x20aa63);
+            msg.textContent="SEQUENCE COMPLETE! Go to the green door.";
+          }else{
+            msg.textContent="Correct! Now find the next button.";
+          }
         }else{
-          level2.next=0;level2.buttons.forEach((b,j)=>b.material.color.set([0xd52b36,0x287ee8,0xe0b42c][j]));
-          msg.textContent="Wrong order! The sequence reset. Start with RED.";
+          level2.next=0;
+          level2.buttons.forEach((b,j)=>b.material.color.set([0xd52b36,0x287ee8,0xe0b42c][j]));
+          msg.textContent="Wrong order! The sequence reset. Start again.";
         }
+        autoCooldown=.6;
         return;
       }
     }
-    if(level2.open&&camera.position.distanceTo(level2.door.position)<3){msg.textContent="LEVEL 2 COMPLETE! 🎉";nextLevel();return;}
+    if(level2.open&&camera.position.distanceTo(level2.door.position)<2.4){nextLevel();return;}
   }else if(level===3){
     if(!carrying){
       let target=null,dist=999;
@@ -322,40 +338,59 @@ function interact(){
         const d=camera.position.distanceTo(b.position);
         if(d<dist){dist=d;target=b;}
       }
-      if(target&&dist<2.2){
+      if(target&&dist<1.65){
         held=target;carrying=true;
-        msg.textContent=target.userData.weight==="heavy"?"Heavy box picked up. It takes more effort to move.":"Light box picked up.";
+        msg.textContent=target.userData.weight==="heavy"
+          ?"Heavy box picked up."
+          :"Light box picked up.";
+        autoCooldown=.35;
         return;
       }
     }else if(held){
-      carrying=false;held=null;msg.textContent="Box dropped.";
-      updateLevel3();return;
+      for(const plate of level3.plates){
+        if(camera.position.distanceTo(plate.position)<1.7){
+          held.position.set(plate.position.x,.8,plate.position.z);
+          carrying=false;held=null;
+          updateLevel3();
+          msg.textContent=level3.open
+            ?"BOTH PLATES PRESSED! Go to the green door."
+            :"Box placed. Put the other box on the other plate.";
+          autoCooldown=.5;
+          return;
+        }
+      }
     }
-    if(level3.open&&camera.position.distanceTo(level3.door.position)<3){msg.textContent="LEVEL 3 COMPLETE! 🎉";nextLevel();return;}
+    if(level3.open&&camera.position.distanceTo(level3.door.position)<2.4){nextLevel();return;}
   }else if(level===4){
-    if(level4.open&&camera.position.distanceTo(level4.door.position)<3){msg.textContent="LEVEL 4 COMPLETE! 🎉";nextLevel();return;}
-    if(level4.mirror&&camera.position.distanceTo(level4.mirror.position)<2.4){
+    if(level4.open&&camera.position.distanceTo(level4.door.position)<2.4){nextLevel();return;}
+    if(level4.mirror&&camera.position.distanceTo(level4.mirror.position)<2.0&&level4AutoState===0){
       level4.state=level4.state?0:1;
       updateLevel4();
-      if(level4.state===0)msg.textContent="Mirror turned away. The laser is no longer aligned.";
+      level4AutoState=1;
+      autoCooldown=.5;
       return;
+    }
+    if(level4.mirror&&camera.position.distanceTo(level4.mirror.position)>=2.4){
+      level4AutoState=0;
     }
   }else if(level===5){
-    if(level5.button&&camera.position.distanceTo(level5.button.position)<2.2){
-      if(!level5.started){
-        level5.started=true; level5.time=6;
-        level5.button.material.color.set(0x35d879);
-        msg.textContent="⏱️ GO! Reach the door!";
-      }else{
-        level5.started=false; level5.time=0;
-        level5.button.material.color.set(0xd52b36);
-        msg.textContent="Timer stopped. Press it to start again.";
-      }
+    if(level5.button&&camera.position.distanceTo(level5.button.position)<1.6&&!level5.started){
+      level5.started=true;level5.time=6;
+      level5.button.material.color.set(0x35d879);
+      msg.textContent="GO! Reach the door!";
+      autoCooldown=.5;
       return;
     }
-    if(level5.open&&camera.position.distanceTo(level5.door.position)<3){msg.textContent="LEVEL 5 COMPLETE! 🎉";return;}
+    if(level5.started&&camera.position.distanceTo(level5.door.position)<2.4){
+      level5.open=true;level5.started=false;
+      level5.door.material.color.set(0x20aa63);
+      msg.textContent="YOU MADE IT! Go through the door.";
+      return;
+    }
   }
 }
+
+
 
 addEventListener("keydown",e=>{
   if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();
@@ -365,7 +400,6 @@ addEventListener("keydown",e=>{
     if(levelKey){testLevel.value=String(levelKey);loadTestLevel(levelKey);return;}
   }
   keys[e.code]=true;
-  if(e.code==="KeyE")interact();
 });
 addEventListener("keyup",e=>{if(["KeyW","KeyA","KeyS","KeyD","ShiftLeft","ShiftRight","Space"].includes(e.code))e.preventDefault();keys[e.code]=false;});
 renderer.domElement.addEventListener("click",()=>{if(!locked&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock();});
@@ -382,7 +416,6 @@ joy.addEventListener("touchend",e=>{for(const t of e.changedTouches)if(t.identif
 lookArea.addEventListener("touchstart",e=>{e.preventDefault();const t=e.changedTouches[0];lookId=t.identifier;lastLookX=t.clientX;lastLookY=t.clientY},{passive:false});
 lookArea.addEventListener("touchmove",e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===lookId){yaw-=(t.clientX-lastLookX)*.006;pitch-=(t.clientY-lastLookY)*.006;pitch=Math.max(-1.35,Math.min(1.35,pitch));lastLookX=t.clientX;lastLookY=t.clientY;}},{passive:false});
 lookArea.addEventListener("touchend",e=>{for(const t of e.changedTouches)if(t.identifier===lookId)lookId=null},{passive:false});
-document.getElementById("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();interact()},{passive:false});
 const sprintBtn=document.getElementById("sprintBtn");
 sprintBtn.addEventListener("touchstart",e=>{e.preventDefault();mobile.sprint=true;sprintBtn.style.transform="scale(.92)"},{passive:false});
 sprintBtn.addEventListener("touchend",e=>{e.preventDefault();mobile.sprint=false;sprintBtn.style.transform="scale(1)"},{passive:false});
@@ -407,10 +440,7 @@ function loop(){
   combineLevel1();
   updateLevel3();
   updateLevel5(dt);
-  if(level===5&&level5.started&&camera.position.distanceTo(level5.door.position)<3){
-    level5.open=true; level5.started=false; level5.door.material.color.set(0x20aa63);
-    msg.textContent="YOU MADE IT! 🟢 Go through the door.";
-  }
+  autoInteract(dt);
  }
  renderer.render(scene,camera);
 }

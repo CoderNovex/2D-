@@ -185,8 +185,9 @@ function updateLevel4(){
 }
 
 function buildLevel5(){
-  clearPuzzle(); makeRoom(); resetPlayer();
-  // Long sprint corridor: Level 5 is intentionally much longer so players learn sprinting.
+  clearPuzzle(); resetPlayer();
+  // Level 5 is one continuous 30-unit sprint corridor. Do not call makeRoom(),
+  // because makeRoom() adds the two interior end walls used by the normal rooms.
   box([14,4.5,.2],[0,2.25,-15],0x252c36); box([14,4.5,.2],[0,2.25,15],0x252c36);
   box([.2,4.5,30],[-7,2.25,0],0x252c36); box([.2,4.5,30],[7,2.25,0],0x252c36);
   box([14,.2,30],[0,0,0],0x343b46);

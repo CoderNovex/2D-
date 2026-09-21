@@ -342,7 +342,7 @@ function applyPlayMode(mode){playMode=mode;const isMobile=mode==="mobile"||(mode
 pcMode.onclick=()=>applyPlayMode("pc");mobileMode.onclick=()=>applyPlayMode("mobile");applyPlayMode("auto");
 const joy=document.getElementById("joy"),stick=document.getElementById("stick"),lookArea=document.getElementById("lookArea");
 let joyId=null,lookId=null,lastLookX=0,lastLookY=0;
-function joyMove(t){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=t.clientX-cx,dy=t.clientY-cy;const max=42,d=Math.hypot(dx,dy);if(d>max){dx*=max/d;dy*=max/d}stick.style.transform=\`translate(\${dx}px,\${dy}px)\`;mobile.x=dx/max;mobile.y=dy/max;}
+function joyMove(t){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=t.clientX-cx,dy=t.clientY-cy;const max=42,d=Math.hypot(dx,dy);if(d>max){dx*=max/d;dy*=max/d}stick.style.transform=`translate(${dx}px,${dy}px)`;mobile.x=dx/max;mobile.y=dy/max;}
 function joyEnd(){joyId=null;mobile.x=0;mobile.y=0;stick.style.transform="translate(0,0)";}
 joy.addEventListener("touchstart",e=>{e.preventDefault();joyId=e.changedTouches[0].identifier;joyMove(e.changedTouches[0])},{passive:false});
 joy.addEventListener("touchmove",e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===joyId)joyMove(t)},{passive:false});
@@ -361,7 +361,8 @@ const clock=new THREE.Clock();
 function loop(){
  requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);
  camera.rotation.order="YXZ";camera.rotation.y=yaw;camera.rotation.x=pitch;
- const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);\n if(locked || mobileActive){
+ const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);
+ if(locked || mobileActive){
   const speed=((keys.ShiftLeft||keys.ShiftRight)||mobile.sprint)?6.5:2.8;
   const f=new THREE.Vector3(0,0,-1),r=new THREE.Vector3(1,0,0),rot=new THREE.Matrix4().makeRotationY(yaw);
   f.applyMatrix4(rot);r.applyMatrix4(rot);const move=new THREE.Vector3();

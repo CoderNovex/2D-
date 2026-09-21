@@ -431,7 +431,7 @@ function interact(){
       return;
     }
     if(level6.open&&camera.position.distanceTo(level6.door.position)<3){
-      animateDoorOpen(level6.door,()=>{level=7;loadTestLevel(7);});
+      animateDoorOpen(level6.door,()=>{msg.textContent="LEVEL 6 COMPLETE!";});
       return;
     }
   }

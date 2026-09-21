@@ -55,6 +55,7 @@ let level3={boxes:[],plates:[],door:null,open:false};
 let level4={mirror:null,beamA:null,beamB:null,receiver:null,door:null,open:false,state:0};
 let level5={button:null,door:null,open:false,time:0,started:false};
 let level6={cores:[],plates:[],door:null,open:false};
+let level7={switches:[],doors:[],open:false};
 let doorAnim=null;
 
 function mat(c){return new THREE.MeshLambertMaterial({color:c});}
@@ -311,6 +312,24 @@ function updateLevel6(){
   }
 }
 
+function buildLevel7(){
+  doorAnim=null;
+  clearPuzzle(); makeRoom(); resetPlayer();
+  box([3.2,4.3,.35],[0,2.15,-6.78],0x68717c);
+  level7.doors=[
+    box([2.5,3.7,.3],[-3.2,1.85,-6.58],0xa32935),
+    box([2.5,3.7,.3],[3.2,1.85,-6.58],0xa32935)
+  ];
+  level7.switches=[
+    box([1.2,.18,1.2],[-3.2,.2,2.5],0xd52b36),
+    box([1.2,.18,1.2],[3.2,.2,2.5],0x287ee8)
+  ];
+  level7.open=false;
+  addWallHint("HINT: BOTH SWITCHES MUST BE ON.",[0,2.7,-6.35],0);
+  setHUD("<b>LEVEL 7 — THE DOUBLE SWITCH</b><br>WASD: move · SHIFT: sprint · Mouse: look · E: interact<br>🔴 Turn on both switches.<br>Both must stay ON to unlock the two doors.");
+  msg.textContent="Turn on both switches.";
+}
+
 function loadTestLevel(n){
   n=Number(n);
   if(n===1){level=1;buildLevel1();return;}
@@ -319,6 +338,7 @@ function loadTestLevel(n){
   if(n===4){level=4;buildLevel4();return;}
   if(n===5){level=5;buildLevel5();return;}
   if(n===6){level=6;buildLevel6();return;}
+  if(n===7){level=7;buildLevel7();return;}
   msg.textContent="Level "+n+" is not built yet. You can still select it for future testing.";
   testLevel.value=String(n);
 }
@@ -433,6 +453,27 @@ function interact(){
     if(level6.open&&camera.position.distanceTo(level6.door.position)<3){
       animateDoorOpen(level6.door,()=>{msg.textContent="LEVEL 6 COMPLETE!";});
       return;
+    }
+  }else if(level===7){
+    for(let i=0;i<2;i++){
+      if(camera.position.distanceTo(level7.switches[i].position)<2){
+        level7.switches[i].material.color.set(level7.switches[i].material.color.getHex()===0x35d879?
+          [0xd52b36,0x287ee8][i]:0x35d879);
+        const on0=level7.switches[0].material.color.getHex()===0x35d879;
+        const on1=level7.switches[1].material.color.getHex()===0x35d879;
+        level7.open=on0&&on1;
+        level7.doors.forEach(d=>d.material.color.set(level7.open?0x20aa63:0xa32935));
+        msg.textContent=level7.open?"BOTH SWITCHES ON! Go through either green door.":"Switch toggled.";
+        return;
+      }
+    }
+    if(level7.open){
+      for(const d of level7.doors){
+        if(camera.position.distanceTo(d.position)<3){
+          animateDoorOpen(d,()=>{msg.textContent="LEVEL 7 COMPLETE!";});
+          return;
+        }
+      }
     }
   }
 }

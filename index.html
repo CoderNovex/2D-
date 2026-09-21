@@ -248,7 +248,8 @@ function combineLevel1(){
 }
 
 function interact(){
-  if(!locked)return;
+  const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);
+  if(!locked && !mobileActive)return;
   if(level===1){
     if(!carrying){
       const targets=[level1.purple,level1.red,level1.blue].filter(Boolean);
@@ -358,7 +359,8 @@ const clock=new THREE.Clock();
 function loop(){
  requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);
  camera.rotation.order="YXZ";camera.rotation.y=yaw;camera.rotation.x=pitch;
- const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);\n if(locked || mobileActive){
+ const mobileActive=playMode==="mobile" || (playMode==="auto" && window.matchMedia("(pointer: coarse)").matches);
+ if(locked || mobileActive){
   const speed=((keys.ShiftLeft||keys.ShiftRight)||mobile.sprint)?6.5:2.8;
   const f=new THREE.Vector3(0,0,-1),r=new THREE.Vector3(1,0,0),rot=new THREE.Matrix4().makeRotationY(yaw);
   f.applyMatrix4(rot);r.applyMatrix4(rot);const move=new THREE.Vector3();
